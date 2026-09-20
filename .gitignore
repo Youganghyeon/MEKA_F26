@@ -1,0 +1,31 @@
+/Debug/
+/Release/
+*.launch
+*.map
+*.o
+*.d
+*.elf
+*.hex
+*.bin
+*.lst
+*.srec
+*.su
+*.suo
+*.user
+*.settings/
+
+# Eclipse specific files
+
+.metadata/
+
+# Other temporary or generated files
+*.bak
+*.tmp
+*.swp
+*~
+
+# macOS 
+.DS_Store
+
+# Windows
+Thumbs.db
