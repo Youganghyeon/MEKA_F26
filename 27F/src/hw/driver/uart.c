@@ -6,7 +6,7 @@
  *
  *  채널 매핑
  *    _DEF_UART1 : USB CDC
- *    _DEF_UART2 : USART1 (DMA1_Channel1, PC 연결)
+ *    _DEF_UART2 : USART1 (DMA1_Channel1, PC 연결, PC4[tx], PA10[rx])
  *    _DEF_UART3 : USART2 (DMA1_Channel2, TEL 연결)
  *    _DEF_UART4 : USART3 (DMA1_Channel3, GPS 연결)
  *
