@@ -23,6 +23,8 @@
 #include "gpio.h"
 #include "cmd.h"
 #include "cdc.h"
+#include "adc.h"
+
 void hwInit(void);
 
 

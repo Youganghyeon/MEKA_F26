@@ -12,6 +12,11 @@
 #include "def.h"
 #include "bsp.h"
 
+#define _USE_HW_ADC
+#define HW_ADC_MAX_CH         1
+#define HW_DEF_ADC1			  0
+
+
 
 #define _USE_HW_LED
 #define      HW_LED_MAX_CH    1

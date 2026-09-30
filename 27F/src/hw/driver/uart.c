@@ -145,7 +145,6 @@ static bool uartOpenDma(uint8_t ch, uint32_t baud)
 
 	HAL_NVIC_SetPriority(p_uart->dma_irq, 0, 0);
 	HAL_NVIC_EnableIRQ(p_uart->dma_irq);
-
 	if (HAL_UART_Init(p_huart) != HAL_OK)
 	{
 		Error_Handler();
@@ -229,9 +228,7 @@ uint32_t uartAvailable(uint8_t ch)
 	case _DEF_UART4:
 		if (uart_tbl[ch].is_open == true)
 		{
-			// DMA 남은 전송 수(CNDTR)로 현재 쓰기 위치 갱신
-			uart_tbl[ch].qbuffer.in = uart_tbl[ch].qbuffer.len
-					- uart_tbl[ch].p_hdma_rx->Instance->CNDTR;
+			uart_tbl[ch].qbuffer.in = uart_tbl[ch].qbuffer.len - uart_tbl[ch].p_hdma_rx->Instance->CNDTR;
 			ret = qbufferAvailable(&uart_tbl[ch].qbuffer);
 		}
 		break;

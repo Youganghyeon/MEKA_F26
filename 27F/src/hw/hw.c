@@ -25,6 +25,7 @@ void hwInit(void)
   cliInit();
   buttonInit();
   cdcInit();
+  adcInit();
   usbBegin(USB_CDC_MODE);
 //  spiBegin(_DEF_SPI1);
 
