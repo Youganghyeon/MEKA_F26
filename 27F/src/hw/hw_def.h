@@ -16,6 +16,9 @@
 #define HW_ADC_MAX_CH         1
 #define HW_DEF_ADC1			  0
 
+//#define _USE_HW_TIMER
+//#define HW_TIM_MAX_CH		  1
+//#define HW_DEF_TIM6           0
 
 
 #define _USE_HW_LED

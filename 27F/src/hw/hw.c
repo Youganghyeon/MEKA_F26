@@ -19,6 +19,7 @@ void hwInit(void)
   gpioInit();
   rtcInit();
   resetInit();
+ // timInit();
   ledInit();
   usbInit();
   uartInit();

@@ -24,6 +24,8 @@
 #include "cmd.h"
 #include "cdc.h"
 #include "adc.h"
+#include "tim.h"
+
 
 void hwInit(void);
 
