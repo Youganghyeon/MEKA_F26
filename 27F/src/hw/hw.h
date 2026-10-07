@@ -25,7 +25,7 @@
 #include "cdc.h"
 #include "adc.h"
 #include "tim.h"
-
+#include "spi.h"
 
 void hwInit(void);
 

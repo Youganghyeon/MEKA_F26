@@ -7,6 +7,7 @@
 
 
 #include "spi.h"
+#include "sd_spi.h"
 
 #ifdef _USE_HW_SPI
 SPI_HandleTypeDef hspi1;
@@ -63,7 +64,7 @@ bool spiOpen(uint8_t ch)
 		p_spi_handle->Init.CLKPolarity = SPI_POLARITY_HIGH;
 		p_spi_handle->Init.CLKPhase = SPI_PHASE_2EDGE;
 		p_spi_handle->Init.NSS = SPI_NSS_SOFT;
-		p_spi_handle->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
+		p_spi_handle->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;//8
 		p_spi_handle->Init.FirstBit = SPI_FIRSTBIT_MSB;
 		p_spi_handle->Init.TIMode = SPI_TIMODE_DISABLE;
 		p_spi_handle->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -84,10 +85,12 @@ bool spiOpen(uint8_t ch)
 		p_spi_handle->Init.Mode = SPI_MODE_MASTER;
 		p_spi_handle->Init.Direction = SPI_DIRECTION_2LINES;
 		p_spi_handle->Init.DataSize = SPI_DATASIZE_8BIT;
-		p_spi_handle->Init.CLKPolarity = SPI_POLARITY_HIGH;
-		p_spi_handle->Init.CLKPhase = SPI_PHASE_2EDGE;
+		/* SD cards require SPI mode 0 during initialization. */
+		p_spi_handle->Init.CLKPolarity = SPI_POLARITY_LOW;
+		p_spi_handle->Init.CLKPhase = SPI_PHASE_1EDGE;
 		p_spi_handle->Init.NSS = SPI_NSS_SOFT;
-		p_spi_handle->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
+		/* Start SD initialization at the slowest divider; speed up after init. */
+		p_spi_handle->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
 		p_spi_handle->Init.FirstBit = SPI_FIRSTBIT_MSB;
 		p_spi_handle->Init.TIMode = SPI_TIMODE_DISABLE;
 		p_spi_handle->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -113,6 +116,23 @@ bool spiOpen(uint8_t ch)
 	}
 	spi_tbl[ch].isInit = true;
 	return ret;
+}
+
+bool spiSetBaudPrescaler(uint8_t ch, uint32_t prescaler)
+{
+	if (ch >= MAX_SPI_CH || !spi_tbl[ch].isInit || spi_tbl[ch].spi_handle == NULL)
+	{
+		return false;
+	}
+
+	SPI_HandleTypeDef *p_spi_handle = spi_tbl[ch].spi_handle;
+	if (HAL_SPI_DeInit(p_spi_handle) != HAL_OK)
+	{
+		return false;
+	}
+
+	p_spi_handle->Init.BaudRatePrescaler = prescaler;
+	return HAL_SPI_Init(p_spi_handle) == HAL_OK;
 }
 
 
@@ -157,14 +177,23 @@ void spiRxCallbackRegister(uint8_t ch, void (*func)(void))
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
 {
 	/* Prevent unused argument(s) compilation warning */
+	if (hspi != NULL && hspi->Instance == SPI2)
+	{
+		SD_SPI_OnTxRxComplete(hspi);
+	}
 			for(int i=0; i<MAX_SPI_CH; i++)
 			{
 				if(spi_tbl[i].spi_handle == NULL) continue;
 				if(hspi->Instance == spi_tbl[i].spi_handle->Instance)
 				{
-					spi_tbl[i].rxfunc();
+					if (spi_tbl[i].rxfunc != NULL) spi_tbl[i].rxfunc();
 				}
 			}
+}
+
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+	SD_SPI_OnTxComplete(hspi);
 }
 void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
 {

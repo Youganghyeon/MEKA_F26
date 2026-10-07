@@ -14,6 +14,9 @@
 void SystemClock_Config(void);
 
 
+
+
+
 void bspInit(void)
 {
   HAL_Init();
@@ -97,10 +100,12 @@ uint32_t millis(void)
 
 int __io_putchar(int ch)
 {
- // uartWrite(_DEF_UART2, (uint8_t *)&ch, 1);
-
-  return 1;
+  uint8_t byte = (uint8_t)ch;
+  (void)uartWrite(_DEF_UART2, &byte, 1);
+  return ch;
 }
+
+
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};

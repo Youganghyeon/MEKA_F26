@@ -25,6 +25,7 @@ typedef enum{
 
 void    spiInit(void);
 bool    spiOpen(uint8_t ch);
+bool    spiSetBaudPrescaler(uint8_t ch, uint32_t prescaler);
 bool    SPI_SendReceive_DMA(uint8_t ch, uint8_t *tx_data, uint8_t* rx_data, uint16_t length);
 bool    SPI_SendReceive(uint8_t ch, uint8_t *tx_data, uint8_t* rx_data, uint16_t length);
 void    spiRxCallbackRegister(uint8_t ch, void (*func)(void));

@@ -22,7 +22,7 @@ typedef struct{
 
 Gpio_tbl_t gpio_tbl[GPIO_MAX_CH]=
 {
-		//   {GPIOB, GPIO_PIN_9, _DEF_INPUT_PULL_UP, GPIO_PIN_SET, GPIO_PIN_RESET, 1},           // SD CARD
+		{SD_CS_GPIO_Port, SD_CS_Pin, _DEF_OUTPUT, GPIO_PIN_SET, GPIO_PIN_RESET, _DEF_HIGH}, // SD card CS, deselected
 		//  {GPIOA, GPIO_PIN_2, _DEF_OUTPUT, GPIO_PIN_SET, GPIO_PIN_RESET, _DEF_LOW  },         // BKP HIGH : Light,      LOW: No Light
 		//  {GPIOA, GPIO_PIN_3, _DEF_OUTPUT, GPIO_PIN_SET, GPIO_PIN_RESET, _DEF_HIGH },         // CS  HIGH : NO Select,  LOW : Select
 		//  {GPIOA, GPIO_PIN_4, _DEF_OUTPUT, GPIO_PIN_SET, GPIO_PIN_RESET, _DEF_HIGH },         // DC  HIGH : DATA     ,  LOW : Command
@@ -85,7 +85,14 @@ bool gpioPinMode(uint8_t ch, uint8_t mode)
 		GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 		break;
 	}
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
 	GPIO_InitStruct.Pin = gpio_tbl[ch].pin;
+	if (mode == _DEF_OUTPUT || mode == _DEF_OUTPUT_PULL_UP || mode == _DEF_OUTPUT_PULL_DOWN)
+	{
+		/* Preload ODR so an active-low CS never glitches low when enabled. */
+		HAL_GPIO_WritePin(gpio_tbl[ch].port, gpio_tbl[ch].pin,
+				gpio_tbl[ch].init_value ? gpio_tbl[ch].on_state : gpio_tbl[ch].off_state);
+	}
 	HAL_GPIO_Init(gpio_tbl[ch].port, &GPIO_InitStruct);
 	return ret;
 }
