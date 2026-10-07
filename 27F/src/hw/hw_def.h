@@ -37,7 +37,7 @@
 #define		 HW_DEF_SPI2		1
 
 #define _USE_HW_GPIO
-#define HW_GPIO_MAX_CH          1
+#define HW_GPIO_MAX_CH          2
 #define _USE_HW_CLI
 #define      HW_CLI_CMD_NAME_MAX    16
 #define      HW_CLI_CMD_LIST_MAX    16

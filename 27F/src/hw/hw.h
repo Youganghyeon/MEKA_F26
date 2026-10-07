@@ -26,6 +26,7 @@
 #include "adc.h"
 #include "tim.h"
 #include "spi.h"
+#include "icm20948.h"
 
 void hwInit(void);
 

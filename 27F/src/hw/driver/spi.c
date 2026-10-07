@@ -64,7 +64,7 @@ bool spiOpen(uint8_t ch)
 		p_spi_handle->Init.CLKPolarity = SPI_POLARITY_HIGH;
 		p_spi_handle->Init.CLKPhase = SPI_PHASE_2EDGE;
 		p_spi_handle->Init.NSS = SPI_NSS_SOFT;
-		p_spi_handle->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;//8
+		p_spi_handle->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;//8
 		p_spi_handle->Init.FirstBit = SPI_FIRSTBIT_MSB;
 		p_spi_handle->Init.TIMode = SPI_TIMODE_DISABLE;
 		p_spi_handle->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;

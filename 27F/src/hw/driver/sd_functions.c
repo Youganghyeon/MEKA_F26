@@ -26,6 +26,7 @@
 
 char sd_path[4];
 FATFS fs;
+static uint8_t sd_driver_linked = 0;
 
 //int sd_format(void) {
 //	// Pre-mount required for legacy FatFS
@@ -57,10 +58,13 @@ int sd_mount(void) {
 	FRESULT res;
 	extern uint8_t sd_is_sdhc(void);
 
-	printf("Linking SD driver...\r\n");
-	if (FATFS_LinkDriver(&SD_Driver, sd_path) != 0) {
-		printf("FATFS_LinkDriver failed\n");
-		return FR_DISK_ERR;
+	if (sd_driver_linked == 0) {
+		printf("Linking SD driver...\r\n");
+		if (FATFS_LinkDriver(&SD_Driver, sd_path) != 0) {
+			printf("FATFS_LinkDriver failed\r\n");
+			return FR_DISK_ERR;
+		}
+		sd_driver_linked = 1;
 	}
 
 	printf("Initializing disk...\r\n");
@@ -70,6 +74,8 @@ int sd_mount(void) {
 		printf("FR_NOT_READY\tTry Hard Reset or Check Connection/Power\r\n");
 		printf("Make sure \"MX_FATFS_Init\" is not being called in the main function\n"\
 				"You need to disable its call in CubeMX->Project Manager->Advance Settings->Uncheck Generate code for MX_FATFS_Init\r\n");
+		FATFS_UnLinkDriver(sd_path);
+		sd_driver_linked = 0;
 		return FR_NOT_READY;
 	}
 
@@ -112,12 +118,22 @@ int sd_mount(void) {
 
 	// Any other mount error
 	printf("Mount failed with code: %d\r\n", res);
+	f_mount(NULL, sd_path, 0);
+	FATFS_UnLinkDriver(sd_path);
+	sd_driver_linked = 0;
 	return res;
 }
 
 
 int sd_unmount(void) {
 	FRESULT res = f_mount(NULL, sd_path, 1);
+	if (sd_driver_linked != 0) {
+		if (FATFS_UnLinkDriver(sd_path) == 0) {
+			sd_driver_linked = 0;
+		} else if (res == FR_OK) {
+			res = FR_DISK_ERR;
+		}
+	}
 	printf("SD card unmounted: %s\r\n", (res == FR_OK) ? "OK" : "Failed");
 	return res;
 }
