@@ -79,6 +79,7 @@ float ax_g, ay_g, az_g;          // 라디안이 아니라 g 단위 그대로 �
 float mx_uT, my_uT, mz_uT;       // 라디안이 아니라 uT 단위 그대로 사용
 
 uint32_t adc_val;
+bool     Flag_1ms= false;
 
 void apMain(void)
 {
@@ -89,15 +90,19 @@ void apMain(void)
 	{
 		//		if(Is20msFlag(DEF_TIM6) == true)
 		//		{
-		icm20948_gyro_read_dps(&my_gyro);
-		icm20948_accel_read_g(&my_accel);
-		ak09916_mag_read_uT(&my_mag);
-		//    gx_rad = my_gyro.x * (3.14159265f / 180.0f);
-		//    gy_rad = my_gyro.y * (3.14159265f / 180.0f);
-		//    gz_rad = my_gyro.z * (3.14159265f / 180.0f);
-		ax_g = my_accel.x;
-		ay_g = my_accel.y;
-		az_g = my_accel.z;
+		if(gpioPinRead(2) && Flag_1ms)
+		{
+			icm20948_gyro_read_dps(&my_gyro);
+			icm20948_accel_read_g(&my_accel);
+			ak09916_mag_read_uT(&my_mag);
+			//    gx_rad = my_gyro.x * (3.14159265f / 180.0f);
+			//    gy_rad = my_gyro.y * (3.14159265f / 180.0f);
+			//    gz_rad = my_gyro.z * (3.14159265f / 180.0f);
+			ax_g = my_accel.x;
+			ay_g = my_accel.y;
+			az_g = my_accel.z;
+			Flag_1ms = false;
+		}
 		adc_val = adcReceive(DEF_ADC1);
 		//		}
 		cliMain();

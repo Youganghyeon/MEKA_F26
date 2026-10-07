@@ -24,7 +24,7 @@ Gpio_tbl_t gpio_tbl[GPIO_MAX_CH]=
 {
 		{SD_CS_GPIO_Port, SD_CS_Pin, _DEF_OUTPUT, GPIO_PIN_SET, GPIO_PIN_RESET, _DEF_HIGH}, // SD card CS, deselected
 		{IMU_CS_GPIO_Port, IMU_CS_Pin, _DEF_OUTPUT, GPIO_PIN_SET, GPIO_PIN_RESET, _DEF_HIGH},
-		//  {GPIOA, GPIO_PIN_2, _DEF_OUTPUT, GPIO_PIN_SET, GPIO_PIN_RESET, _DEF_LOW  },         // BKP HIGH : Light,      LOW: No Light
+		{GPIOB, GPIO_PIN_1, _DEF_INPUT, GPIO_PIN_SET, GPIO_PIN_RESET, _DEF_LOW  },         // BKP HIGH : Light,      LOW: No Light
 		//  {GPIOA, GPIO_PIN_3, _DEF_OUTPUT, GPIO_PIN_SET, GPIO_PIN_RESET, _DEF_HIGH },         // CS  HIGH : NO Select,  LOW : Select
 		//  {GPIOA, GPIO_PIN_4, _DEF_OUTPUT, GPIO_PIN_SET, GPIO_PIN_RESET, _DEF_HIGH },         // DC  HIGH : DATA     ,  LOW : Command
 		//  {GPIOB, GPIO_PIN_1, _DEF_OUTPUT, GPIO_PIN_SET, GPIO_PIN_RESET, _DEF_LOW },          // RST LOW:ACTIVE

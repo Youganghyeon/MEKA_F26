@@ -77,6 +77,8 @@ void icm20948_init()
 
   icm20948_gyro_full_scale_select(_2000dps);
   icm20948_accel_full_scale_select(_2g);
+
+  icm20948_int_data_ready_enable();
 }
 
 void ak09916_init()
@@ -171,6 +173,12 @@ bool icm20948_who_am_i()
     return true;
   else
     return false;
+}
+
+void icm20948_int_data_ready_enable(void)
+{
+  /* INT_PIN_CFG stays at its reset default: active-high, push-pull, pulse mode. */
+  write_single_icm20948_reg(ub_0, B0_INT_ENABLE_1, 0x01); // RAW_DATA_0_RDY_EN
 }
 
 bool ak09916_who_am_i()
