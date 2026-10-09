@@ -27,6 +27,8 @@
 #include "tim.h"
 #include "spi.h"
 #include "icm20948.h"
+#include "LinearS.h"
+
 
 void hwInit(void);
 
