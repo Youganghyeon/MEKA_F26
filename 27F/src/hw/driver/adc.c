@@ -120,7 +120,6 @@ uint32_t adcReceive(uint8_t ch)
   return adcVal;
 }
 
-
 void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
 {
 
