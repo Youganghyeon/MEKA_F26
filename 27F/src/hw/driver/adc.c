@@ -22,6 +22,20 @@ ADC_tbl_t ADC_tbl[ADC_MAX_CH] = {
     {DEF_ADC1, &hadc1, false, false},
 };
 
+/* Four external inputs are multiplexed by the single ADC1 peripheral. */
+typedef struct {
+  GPIO_TypeDef *port;
+  uint16_t pin;
+  uint32_t adc_channel;
+} ADC_InputChannel_t;
+
+static const ADC_InputChannel_t adc_input_channels[ADC_INPUT_CHANNEL_COUNT] = {
+    {FL_ADC_GPIO_Port, FL_ADC_Pin, ADC_CHANNEL_1}, /* PA0 -> ADC1_IN1 */
+    {FR_ADC_GPIO_Port, FR_ADC_Pin, ADC_CHANNEL_2}, /* PA1 -> ADC1_IN2 */
+    {BL_ADC_GPIO_Port, BL_ADC_Pin, ADC_CHANNEL_3}, /* PA2 -> ADC1_IN3 */
+    {BR_ADC_GPIO_Port, BR_ADC_Pin, ADC_CHANNEL_4}, /* PA3 -> ADC1_IN4 */
+};
+
 
 void adcInit(void)
 {
@@ -33,7 +47,7 @@ void adcInit(void)
 }
 
 
-bool adcOpen(uint8_t ch)
+static bool adcOpenConfigured(uint8_t ch)
 {
   bool ret= false;
   ADC_tbl_t* p_adc = &ADC_tbl[ch];
@@ -79,15 +93,15 @@ bool adcOpen(uint8_t ch)
       }
 
       /** Configure Regular Channel */
-      sConfig.Channel = ADC_CHANNEL_1;
+      sConfig.Channel = adc_input_channels[0].adc_channel;
       sConfig.Rank = ADC_REGULAR_RANK_1;
-      sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+      sConfig.SamplingTime = ADC_SAMPLETIME_47CYCLES_5;
       sConfig.SingleDiff = ADC_SINGLE_ENDED;
       sConfig.OffsetNumber = ADC_OFFSET_NONE;
       sConfig.Offset = 0;
       if (HAL_ADC_ConfigChannel(p_handle, &sConfig) != HAL_OK)
       {
-        ret= false;
+        ret = false;
       }
       p_adc->isOpen=ret;
 
@@ -96,6 +110,17 @@ bool adcOpen(uint8_t ch)
       break;
   }
     return ret;
+}
+
+bool adcOpen(uint8_t ch)
+{
+  return adcOpenConfigured(ch);
+}
+
+bool adcOpenAllChannels(void)
+{
+  /* Initialize the one ADC1 peripheral; input channels are mapped below. */
+  return adcOpenConfigured(DEF_ADC1);
 }
 
 uint32_t adcReceive(uint8_t ch)
@@ -118,6 +143,42 @@ uint32_t adcReceive(uint8_t ch)
   }
   HAL_ADC_Stop(ADC_tbl[ch].ADC_Handle);
   return adcVal;
+}
+
+bool adcReadAllChannels(uint32_t values[ADC_INPUT_CHANNEL_COUNT])
+{
+  ADC_HandleTypeDef *handle = ADC_tbl[DEF_ADC1].ADC_Handle;
+  ADC_ChannelConfTypeDef config = {0};
+
+  if (values == NULL || !ADC_tbl[DEF_ADC1].isOpen)
+  {
+    return false;
+  }
+
+  for (uint32_t index = 0; index < ADC_INPUT_CHANNEL_COUNT; index++)
+  {
+    config.Channel = adc_input_channels[index].adc_channel;
+    config.Rank = ADC_REGULAR_RANK_1;
+    config.SamplingTime = ADC_SAMPLETIME_47CYCLES_5;
+    config.SingleDiff = ADC_SINGLE_ENDED;
+    config.OffsetNumber = ADC_OFFSET_NONE;
+    config.Offset = 0;
+
+    if (HAL_ADC_ConfigChannel(handle, &config) != HAL_OK ||
+        HAL_ADC_Start(handle) != HAL_OK)
+    {
+      return false;
+    }
+
+    if (HAL_ADC_PollForConversion(handle, 10) != HAL_OK)
+    {
+      (void)HAL_ADC_Stop(handle);
+      return false;
+    }
+    values[index] = HAL_ADC_GetValue(handle);
+    (void)HAL_ADC_Stop(handle);
+  }
+  return true;
 }
 
 void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
