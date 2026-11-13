@@ -225,19 +225,17 @@ void apMain(void)
 	sdLogStart();
 	while(1)
 	{
+		bool adc_sample_valid = adcReadAllChannels(adc_values);
 		//		if(Is20msFlag(DEF_TIM6) == true)
 		//		{
 		uint32_t currentMillis = HAL_GetTick();
 		if ((uint32_t)(currentMillis - previousMillis) >= SAMPLE_INTERVAL_MS)
 		{
 			previousMillis = currentMillis;
-			if (gpioPinRead(2))
+			if (gpioPinRead(2) && adc_sample_valid)
 			{
 				icm20948_accel_read_g(&my_accel);
-				if (adcReadAllChannels(adc_values))
-				{
-					sdLogSample(&my_accel, adc_values);
-				}
+				sdLogSample(&my_accel, adc_values);
 			}
 			//    gx_rad = my_gyro.x * (3.14159265f / 180.0f);
 			//    gy_rad = my_gyro.y * (3.14159265f / 180.0f);
