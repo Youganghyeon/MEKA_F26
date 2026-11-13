@@ -60,10 +60,9 @@ typedef enum
 
 /* Main Functions */
 
-// sensor init function.
-// if sensor id is wrong, it is stuck in while.
-void icm20948_init();
-void ak09916_init();
+// Sensor init functions return false if WHO_AM_I is not found before timeout.
+bool icm20948_init(void);
+bool ak09916_init(void);
 
 // 16 bits ADC value. raw data.
 void icm20948_gyro_read(axises* data);
@@ -109,7 +108,6 @@ void icm20948_accel_calibration();
 
 void icm20948_gyro_full_scale_select(gyro_full_scale full_scale);
 void icm20948_accel_full_scale_select(accel_full_scale full_scale);
-void icm20948_int_data_ready_enable(void);
 
 
 /* ICM-20948 Registers */
@@ -124,7 +122,6 @@ void icm20948_int_data_ready_enable(void);
 #define B0_PWR_MGMT_2         0x07
 #define B0_INT_PIN_CFG          0x0F
 #define B0_INT_ENABLE         0x10
-#define B0_INT_ENABLE_1         0x11
 #define B0_INT_ENABLE_2         0x12
 #define B0_INT_ENABLE_3         0x13
 #define B0_I2C_MST_STATUS       0x17

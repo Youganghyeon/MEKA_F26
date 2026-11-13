@@ -17,6 +17,8 @@ extern SPI_HandleTypeDef hspi1;
 #define ICM20948_SPI                  (&hspi1)
 #define ICM20948_SPI_CS_PIN_PORT      GPIOB
 #define ICM20948_SPI_CS_PIN_NUMBER    GPIO_PIN_0
+#define ICM20948_WHO_AM_I_TIMEOUT_MS  1000U
+#define AK09916_WHO_AM_I_TIMEOUT_MS   1000U
 
 
 
@@ -53,10 +55,20 @@ static uint8_t* read_multiple_ak09916_reg(uint8_t reg, uint8_t len);
 
 
 /* Main Functions */
-void icm20948_init()
+bool icm20948_init(void)
 {
+  uint32_t start_ms;
+
   HAL_Delay(50);
-  while(!icm20948_who_am_i());
+  start_ms = HAL_GetTick();
+  while (!icm20948_who_am_i())
+  {
+    if ((uint32_t)(HAL_GetTick() - start_ms) >= ICM20948_WHO_AM_I_TIMEOUT_MS)
+    {
+      return false;
+    }
+    HAL_Delay(1);
+  }
 
   icm20948_device_reset();
   icm20948_wakeup();
@@ -78,19 +90,30 @@ void icm20948_init()
   icm20948_gyro_full_scale_select(_2000dps);
   icm20948_accel_full_scale_select(_2g);
 
-  icm20948_int_data_ready_enable();
+  return true;
 }
 
-void ak09916_init()
+bool ak09916_init(void)
 {
+  uint32_t start_ms;
+
   icm20948_i2c_master_reset();
   icm20948_i2c_master_enable();
   icm20948_i2c_master_clk_frq(7);
 
-  while(!ak09916_who_am_i());
+  start_ms = HAL_GetTick();
+  while (!ak09916_who_am_i())
+  {
+    if ((uint32_t)(HAL_GetTick() - start_ms) >= AK09916_WHO_AM_I_TIMEOUT_MS)
+    {
+      return false;
+    }
+  }
 
   ak09916_soft_reset();
   ak09916_operation_mode_setting(continuous_measurement_100hz);
+
+  return true;
 }
 
 void icm20948_gyro_read(axises* data)
@@ -173,12 +196,6 @@ bool icm20948_who_am_i()
     return true;
   else
     return false;
-}
-
-void icm20948_int_data_ready_enable(void)
-{
-  /* INT_PIN_CFG stays at its reset default: active-high, push-pull, pulse mode. */
-  write_single_icm20948_reg(ub_0, B0_INT_ENABLE_1, 0x01); // RAW_DATA_0_RDY_EN
 }
 
 bool ak09916_who_am_i()

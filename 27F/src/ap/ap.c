@@ -16,6 +16,7 @@ void cliBoot(cli_args_t *args);
 #define SD_LOG_LINE_SIZE     128U
 #define ADC_CHANNEL_COUNT      4U
 #define SAMPLE_INTERVAL_MS   10U
+#define ICM_SAMPLE_INTERVAL_MS 1U
 
 static char sd_log_filename[13];
 static FIL sd_log_file;
@@ -195,8 +196,14 @@ void apInit(void)
 	//	istimOpen(DEF_TIM6);
 	spiOpen(_DEF_SPI1);
 	spiOpen(_DEF_SPI2);
-	icm20948_init();
-	ak09916_init();
+	if (!icm20948_init())
+	{
+		printf("[ICM20948] WHO_AM_I timeout; initialization skipped\r\n");
+	}
+	else if (!ak09916_init())
+	{
+		printf("[AK09916] WHO_AM_I timeout; initialization skipped\r\n");
+	}
 	if (!adcOpenAllChannels())
 	{
 		printf("[ADC] Failed to open ADC1 channels PA0-PA3\r\n");
@@ -216,6 +223,7 @@ float ax_g, ay_g, az_g;          // 라디안이 아니라 g 단위 그대로 �
 float mx_uT, my_uT, mz_uT;       // 라디안이 아니라 uT 단위 그대로 사용
 
 uint32_t previousMillis = 0;
+uint32_t previousImuMillis = 0;
 bool     Flag_1ms = false; /* Still referenced by the SysTick handler. */
 
 void apMain(void)
@@ -224,6 +232,16 @@ void apMain(void)
 	while(1)
 	{
 		uint32_t currentMillis = HAL_GetTick();
+		if ((uint32_t)(currentMillis - previousImuMillis) >= ICM_SAMPLE_INTERVAL_MS)
+		{
+			previousImuMillis = currentMillis;
+			icm20948_accel_read_g(&my_accel);
+			sdLogImuSample(&my_accel);
+			ax_g = my_accel.x;
+			ay_g = my_accel.y;
+			az_g = my_accel.z;
+		}
+
 		if ((uint32_t)(currentMillis - previousMillis) >= SAMPLE_INTERVAL_MS)
 		{
 			previousMillis = currentMillis;
@@ -233,15 +251,6 @@ void apMain(void)
 			}
 		}
 
-		/* ADC logging is independent; log IMU only while PB1 is high. */
-		if (gpioPinRead(2))
-		{
-			icm20948_accel_read_g(&my_accel);
-			sdLogImuSample(&my_accel);
-			ax_g = my_accel.x;
-			ay_g = my_accel.y;
-			az_g = my_accel.z;
-		}
 		cliMain();
 	}
 
