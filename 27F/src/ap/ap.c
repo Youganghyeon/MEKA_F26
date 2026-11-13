@@ -15,13 +15,7 @@ void cliBoot(cli_args_t *args);
 #define SD_LOG_BUFFER_SIZE  4096U
 #define SD_LOG_LINE_SIZE     128U
 #define ADC_CHANNEL_COUNT      4U
-#define ADC_MAX_VALUE       4095ULL
-#define ADC_REFERENCE_MV    3300ULL
-#define SENSOR_MAX_MV       5000ULL
-#define SENSOR_MAX_CENTI_CM  750ULL
-#define DIVIDER_TOP_OHM     1000ULL
-#define DIVIDER_BOTTOM_OHM  1800ULL
-#define SAMPLE_INTERVAL_MS    10U
+#define SAMPLE_INTERVAL_MS   10U
 
 static char sd_log_filename[13];
 static FIL sd_log_file;
@@ -59,7 +53,7 @@ static bool sdLogFlush(void)
 
 static void sdLogStart(void)
 {
-	static const char header[] = "Time_ms,ax_g,ay_g,az_g,FL_cm,FR_cm,BL_cm,BR_cm\r\n";
+	static const char header[] = "Time_ms,Type,ax_g,ay_g,az_g,FL_adc,FR_adc,BL_adc,BR_adc\r\n";
 	FILINFO file_info;
 	UINT bytes_written = 0;
 	FRESULT result = FR_NO_FILE;
@@ -119,55 +113,19 @@ static void sdLogStart(void)
 	sd_log_active = true;
 }
 
-static uint16_t adcToDistanceCentiCm(uint32_t adc_value)
+static void floatToParts3(float value, const char **sign, uint32_t *whole, uint32_t *fraction)
 {
-	uint64_t numerator = (uint64_t)adc_value * ADC_REFERENCE_MV *
-			(DIVIDER_TOP_OHM + DIVIDER_BOTTOM_OHM) * SENSOR_MAX_CENTI_CM;
-	uint64_t denominator = ADC_MAX_VALUE * DIVIDER_BOTTOM_OHM * SENSOR_MAX_MV;
-	uint64_t distance = (numerator + denominator / 2ULL) / denominator;
-	return (uint16_t)((distance > SENSOR_MAX_CENTI_CM) ? SENSOR_MAX_CENTI_CM : distance);
-}
-
-static void floatToParts6(float value, const char **sign, uint32_t *whole, uint32_t *fraction)
-{
-	int32_t scaled = (int32_t)(value * 1000000.0f + (value >= 0.0f ? 0.5f : -0.5f));
+	int32_t scaled = (int32_t)(value * 1000.0f + (value >= 0.0f ? 0.5f : -0.5f));
 	uint32_t magnitude = (scaled < 0) ? (uint32_t)(-scaled) : (uint32_t)scaled;
 
 	*sign = (scaled < 0) ? "-" : "";
-	*whole = magnitude / 1000000U;
-	*fraction = magnitude % 1000000U;
+	*whole = magnitude / 1000U;
+	*fraction = magnitude % 1000U;
 }
 
-static void sdLogSample(const axises *accel, const uint32_t adc_values[ADC_CHANNEL_COUNT])
+static void sdLogAppendRecord(const char *line, int length)
 {
-	char line[SD_LOG_LINE_SIZE];
-	uint16_t distance[ADC_CHANNEL_COUNT];
-	const char *ax_sign, *ay_sign, *az_sign;
-	uint32_t ax_whole, ax_fraction, ay_whole, ay_fraction, az_whole, az_fraction;
-	int length;
-
-	if (!sd_log_active)
-	{
-		return;
-	}
-	for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
-	{
-		distance[i] = adcToDistanceCentiCm(adc_values[i]);
-	}
-	floatToParts6(accel->x, &ax_sign, &ax_whole, &ax_fraction);
-	floatToParts6(accel->y, &ay_sign, &ay_whole, &ay_fraction);
-	floatToParts6(accel->z, &az_sign, &az_whole, &az_fraction);
-
-	length = snprintf(line, sizeof(line), "%lu,%s%lu.%06lu,%s%lu.%06lu,%s%lu.%06lu,%u.%02u,%u.%02u,%u.%02u,%u.%02u\r\n",
-			(unsigned long)HAL_GetTick(),
-			ax_sign, (unsigned long)ax_whole, (unsigned long)ax_fraction,
-			ay_sign, (unsigned long)ay_whole, (unsigned long)ay_fraction,
-			az_sign, (unsigned long)az_whole, (unsigned long)az_fraction,
-			distance[0] / 100, distance[0] % 100,
-			distance[1] / 100, distance[1] % 100,
-			distance[2] / 100, distance[2] % 100,
-			distance[3] / 100, distance[3] % 100);
-	if (length <= 0 || (size_t)length >= sizeof(line))
+	if (!sd_log_active || length <= 0 || (size_t)length >= SD_LOG_LINE_SIZE)
 	{
 		return;
 	}
@@ -179,10 +137,50 @@ static void sdLogSample(const axises *accel, const uint32_t adc_values[ADC_CHANN
 	memcpy(&sd_log_buffer[sd_log_used], line, (size_t)length);
 	sd_log_used += (UINT)length;
 
-	if (sd_log_used >= SD_LOG_BUFFER_SIZE)
+	/* Flush before the next record would run out of room. */
+	if (sd_log_used >= SD_LOG_BUFFER_SIZE - SD_LOG_LINE_SIZE)
 	{
 		(void)sdLogFlush();
 	}
+}
+
+static void sdLogLinearSample(const uint32_t adc_values[ADC_CHANNEL_COUNT])
+{
+	char line[SD_LOG_LINE_SIZE];
+	int length;
+
+	if (!sd_log_active)
+	{
+		return;
+	}
+	length = snprintf(line, sizeof(line), "%lu,ADC,,,,%lu,%lu,%lu,%lu\r\n",
+			(unsigned long)HAL_GetTick(),
+			(unsigned long)adc_values[0], (unsigned long)adc_values[1],
+			(unsigned long)adc_values[2], (unsigned long)adc_values[3]);
+	sdLogAppendRecord(line, length);
+}
+
+static void sdLogImuSample(const axises *accel)
+{
+	char line[SD_LOG_LINE_SIZE];
+	const char *ax_sign, *ay_sign, *az_sign;
+	uint32_t ax_whole, ax_fraction, ay_whole, ay_fraction, az_whole, az_fraction;
+	int length;
+
+	if (!sd_log_active)
+	{
+		return;
+	}
+	floatToParts3(accel->x, &ax_sign, &ax_whole, &ax_fraction);
+	floatToParts3(accel->y, &ay_sign, &ay_whole, &ay_fraction);
+	floatToParts3(accel->z, &az_sign, &az_whole, &az_fraction);
+
+	length = snprintf(line, sizeof(line), "%lu,IMU,%s%lu.%03lu,%s%lu.%03lu,%s%lu.%03lu,,,,\r\n",
+			(unsigned long)HAL_GetTick(),
+			ax_sign, (unsigned long)ax_whole, (unsigned long)ax_fraction,
+			ay_sign, (unsigned long)ay_whole, (unsigned long)ay_fraction,
+			az_sign, (unsigned long)az_whole, (unsigned long)az_fraction);
+	sdLogAppendRecord(line, length);
 }
 
 //cmd_t cmd;
@@ -225,21 +223,21 @@ void apMain(void)
 	sdLogStart();
 	while(1)
 	{
-		bool adc_sample_valid = adcReadAllChannels(adc_values);
-		//		if(Is20msFlag(DEF_TIM6) == true)
-		//		{
 		uint32_t currentMillis = HAL_GetTick();
 		if ((uint32_t)(currentMillis - previousMillis) >= SAMPLE_INTERVAL_MS)
 		{
 			previousMillis = currentMillis;
-			if (gpioPinRead(2) && adc_sample_valid)
+			if (adcReadAllChannels(adc_values))
 			{
-				icm20948_accel_read_g(&my_accel);
-				sdLogSample(&my_accel, adc_values);
+				sdLogLinearSample(adc_values);
 			}
-			//    gx_rad = my_gyro.x * (3.14159265f / 180.0f);
-			//    gy_rad = my_gyro.y * (3.14159265f / 180.0f);
-			//    gz_rad = my_gyro.z * (3.14159265f / 180.0f);
+		}
+
+		/* ADC logging is independent; log IMU only while PB1 is high. */
+		if (gpioPinRead(2))
+		{
+			icm20948_accel_read_g(&my_accel);
+			sdLogImuSample(&my_accel);
 			ax_g = my_accel.x;
 			ay_g = my_accel.y;
 			az_g = my_accel.z;
